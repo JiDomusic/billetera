@@ -1,0 +1,427 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import '../../services/admin_service.dart';
+
+class AdminDashboardScreen extends StatefulWidget {
+  const AdminDashboardScreen({super.key});
+
+  @override
+  State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  final _adminService = AdminService();
+  int _selectedIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Panel Admin'),
+        backgroundColor: const Color(0xFF00D4AA),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: () async {
+              await _adminService.signOut();
+              if (mounted) {
+                context.go('/admin');
+              }
+            },
+          ),
+        ],
+      ),
+      body: Row(
+        children: [
+          NavigationRail(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            labelType: NavigationRailLabelType.all,
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.pending_actions),
+                label: Text('Depositos'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.people),
+                label: Text('Usuarios'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.currency_exchange),
+                label: Text('Cotizacion'),
+              ),
+            ],
+          ),
+          const VerticalDivider(thickness: 1, width: 1),
+          Expanded(
+            child: _buildContent(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    switch (_selectedIndex) {
+      case 0:
+        return const _PendingDepositsView();
+      case 1:
+        return const _UsersView();
+      case 2:
+        return const _ExchangeRateView();
+      default:
+        return const SizedBox();
+    }
+  }
+}
+
+class _PendingDepositsView extends StatefulWidget {
+  const _PendingDepositsView();
+
+  @override
+  State<_PendingDepositsView> createState() => _PendingDepositsViewState();
+}
+
+class _PendingDepositsViewState extends State<_PendingDepositsView> {
+  final _adminService = AdminService();
+  List<Map<String, dynamic>> _deposits = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDeposits();
+  }
+
+  Future<void> _loadDeposits() async {
+    setState(() => _isLoading = true);
+    try {
+      final deposits = await _adminService.getPendingDeposits();
+      setState(() => _deposits = deposits);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_deposits.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle, size: 64, color: Colors.green),
+            SizedBox(height: 16),
+            Text('No hay depositos pendientes'),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadDeposits,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _deposits.length,
+        itemBuilder: (context, index) {
+          final deposit = _deposits[index];
+          final user = deposit['users'] as Map<String, dynamic>?;
+          return Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.orange,
+                child: Text(deposit['currency'] ?? ''),
+              ),
+              title: Text(user?['full_name'] ?? 'Usuario'),
+              subtitle: Text(
+                '\$${deposit['amount']} ${deposit['currency']}\n${user?['email'] ?? ''}',
+              ),
+              isThreeLine: true,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.check, color: Colors.green),
+                    onPressed: () async {
+                      await _adminService.approveDeposit(
+                        deposit['id'],
+                        deposit['user_id'],
+                        (deposit['amount'] as num).toDouble(),
+                        deposit['currency'],
+                      );
+                      _loadDeposits();
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    onPressed: () async {
+                      await _adminService.rejectDeposit(deposit['id'], null);
+                      _loadDeposits();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _UsersView extends StatefulWidget {
+  const _UsersView();
+
+  @override
+  State<_UsersView> createState() => _UsersViewState();
+}
+
+class _UsersViewState extends State<_UsersView> {
+  final _adminService = AdminService();
+  List<Map<String, dynamic>> _users = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsers();
+  }
+
+  Future<void> _loadUsers() async {
+    setState(() => _isLoading = true);
+    try {
+      final users = await _adminService.getAllUsers();
+      setState(() => _users = users);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showAddBalanceDialog(Map<String, dynamic> user) {
+    final amountController = TextEditingController();
+    String currency = 'ARS';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Agregar saldo a ${user['full_name']}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Monto',
+                prefixText: '\$ ',
+              ),
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: currency,
+              items: const [
+                DropdownMenuItem(value: 'ARS', child: Text('ARS')),
+                DropdownMenuItem(value: 'USD', child: Text('USD')),
+              ],
+              onChanged: (value) => currency = value ?? 'ARS',
+              decoration: const InputDecoration(labelText: 'Moneda'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final amount = double.tryParse(amountController.text);
+              if (amount != null && amount > 0) {
+                await _adminService.addBalance(user['id'], amount, currency);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Saldo agregado')),
+                  );
+                }
+              }
+            },
+            child: const Text('Agregar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadUsers,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _users.length,
+        itemBuilder: (context, index) {
+          final user = _users[index];
+          return Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                child: Text(
+                  (user['full_name'] as String?)?.substring(0, 1).toUpperCase() ?? '?',
+                ),
+              ),
+              title: Text(user['full_name'] ?? 'Sin nombre'),
+              subtitle: Text('${user['email']}\nCVU: ${user['cvu'] ?? 'N/A'}'),
+              isThreeLine: true,
+              trailing: IconButton(
+                icon: const Icon(Icons.add_circle, color: Colors.green),
+                onPressed: () => _showAddBalanceDialog(user),
+                tooltip: 'Agregar saldo',
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ExchangeRateView extends StatefulWidget {
+  const _ExchangeRateView();
+
+  @override
+  State<_ExchangeRateView> createState() => _ExchangeRateViewState();
+}
+
+class _ExchangeRateViewState extends State<_ExchangeRateView> {
+  final _adminService = AdminService();
+  final _buyController = TextEditingController();
+  final _sellController = TextEditingController();
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRate();
+  }
+
+  @override
+  void dispose() {
+    _buyController.dispose();
+    _sellController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadRate() async {
+    setState(() => _isLoading = true);
+    try {
+      final rate = await _adminService.getExchangeRate();
+      if (rate != null) {
+        _buyController.text = rate['buy_rate'].toString();
+        _sellController.text = rate['sell_rate'].toString();
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveRate() async {
+    final buyRate = double.tryParse(_buyController.text);
+    final sellRate = double.tryParse(_sellController.text);
+
+    if (buyRate == null || sellRate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Valores invalidos')),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    try {
+      await _adminService.updateExchangeRate(buyRate, sellRate);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cotizacion actualizada')),
+        );
+      }
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Cotizacion USD',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _buyController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Precio de compra (ARS)',
+                prefixText: '\$ ',
+                border: OutlineInputBorder(),
+                helperText: 'Precio al que compras USD',
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _sellController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Precio de venta (ARS)',
+                prefixText: '\$ ',
+                border: OutlineInputBorder(),
+                helperText: 'Precio al que vendes USD',
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: _isSaving ? null : _saveRate,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: const Color(0xFF00D4AA),
+              ),
+              child: _isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Guardar Cotizacion'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
