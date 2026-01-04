@@ -26,14 +26,20 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WalletProvider()),
       ],
       child: MaterialApp.router(
-        title: 'Billetera Virtual',
+        title: 'Billetera JJ',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.blue,
+            seedColor: const Color(0xFF00D4AA),
             brightness: Brightness.light,
           ),
           useMaterial3: true,
+          scaffoldBackgroundColor: Colors.white,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Color(0xFF00D4AA),
+            foregroundColor: Colors.white,
+            elevation: 0,
+          ),
           inputDecorationTheme: InputDecorationTheme(
             filled: true,
             fillColor: Colors.grey[50],
@@ -46,17 +52,20 @@ class MyApp extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.blue, width: 2),
+              borderSide: const BorderSide(color: Color(0xFF00D4AA), width: 2),
             ),
           ),
           cardTheme: CardThemeData(
-            elevation: 2,
+            elevation: 0,
+            color: Colors.grey[50],
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
           ),
           filledButtonTheme: FilledButtonThemeData(
             style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF00D4AA),
+              foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

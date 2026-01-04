@@ -40,7 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Billetera Virtual'),
+        title: const Text('Billetera JJ'),
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
