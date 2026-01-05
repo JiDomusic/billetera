@@ -123,4 +123,62 @@ class AdminService {
       'status': 'completed',
     });
   }
+
+  // Obtener solicitudes de retiro pendientes
+  Future<List<Map<String, dynamic>>> getPendingWithdrawals() async {
+    final response = await SupabaseConfig.client
+        .from('withdrawal_requests')
+        .select('*, users(full_name, email)')
+        .eq('status', 'pending')
+        .order('created_at', ascending: false);
+    return List<Map<String, dynamic>>.from(response);
+  }
+
+  // Aprobar retiro
+  Future<void> approveWithdrawal(String withdrawalId, String userId, double amount, String currency) async {
+    // Obtener wallet del usuario
+    final wallet = await SupabaseConfig.client
+        .from('wallets')
+        .select()
+        .eq('user_id', userId)
+        .eq('currency', currency)
+        .single();
+
+    final currentBalance = (wallet['balance'] as num).toDouble();
+    if (currentBalance < amount) {
+      throw Exception('Saldo insuficiente en la billetera del usuario');
+    }
+
+    // Actualizar solicitud
+    await SupabaseConfig.client.from('withdrawal_requests').update({
+      'status': 'approved',
+      'processed_at': DateTime.now().toIso8601String(),
+    }).eq('id', withdrawalId);
+
+    // Restar saldo
+    final newBalance = currentBalance - amount;
+    await SupabaseConfig.client.from('wallets').update({
+      'balance': newBalance,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', wallet['id']);
+
+    // Registrar transaccion
+    await SupabaseConfig.client.from('transactions').insert({
+      'from_wallet_id': wallet['id'],
+      'type': 'withdraw',
+      'amount': amount,
+      'currency': currency,
+      'description': 'Retiro aprobado por admin',
+      'status': 'completed',
+    });
+  }
+
+  // Rechazar retiro
+  Future<void> rejectWithdrawal(String withdrawalId, String? reason) async {
+    await SupabaseConfig.client.from('withdrawal_requests').update({
+      'status': 'rejected',
+      'admin_notes': reason,
+      'processed_at': DateTime.now().toIso8601String(),
+    }).eq('id', withdrawalId);
+  }
 }

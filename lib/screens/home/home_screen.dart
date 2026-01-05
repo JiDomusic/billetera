@@ -194,9 +194,43 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: _buildActionButton(
                           context,
                           icon: Icons.qr_code_rounded,
-                          label: 'QR',
+                          label: 'Mi QR',
                           color: const Color(0xFFB388FF),
                           onTap: () => context.go('/qr'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionButton(
+                          context,
+                          icon: Icons.qr_code_scanner_rounded,
+                          label: 'Escanear',
+                          color: const Color(0xFFFFB74D),
+                          onTap: () => context.go('/scan-qr'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionButton(
+                          context,
+                          icon: Icons.arrow_downward_rounded,
+                          label: 'Depositar',
+                          color: const Color(0xFF81C784),
+                          onTap: () => context.go('/deposit'),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionButton(
+                          context,
+                          icon: Icons.arrow_upward_rounded,
+                          label: 'Retirar',
+                          color: const Color(0xFFE57373),
+                          onTap: () => context.go('/withdraw'),
                         ),
                       ),
                     ],

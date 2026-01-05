@@ -5,12 +5,16 @@ import 'config/supabase_config.dart';
 import 'config/app_routes.dart';
 import 'providers/auth_provider.dart';
 import 'providers/wallet_provider.dart';
+import 'services/notification_service.dart';
+import 'services/cache_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await FirebaseConfig.initialize();
   await SupabaseConfig.initialize();
+  await CacheService().initialize();
+  await NotificationService().initialize();
 
   runApp(const MyApp());
 }

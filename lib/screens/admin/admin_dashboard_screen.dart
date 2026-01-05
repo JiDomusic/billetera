@@ -45,8 +45,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             labelType: NavigationRailLabelType.all,
             destinations: const [
               NavigationRailDestination(
-                icon: Icon(Icons.pending_actions),
+                icon: Icon(Icons.arrow_downward),
                 label: Text('Depositos'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.arrow_upward),
+                label: Text('Retiros'),
               ),
               NavigationRailDestination(
                 icon: Icon(Icons.people),
@@ -72,8 +76,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 0:
         return const _PendingDepositsView();
       case 1:
-        return const _UsersView();
+        return const _PendingWithdrawalsView();
       case 2:
+        return const _UsersView();
+      case 3:
         return const _ExchangeRateView();
       default:
         return const SizedBox();
@@ -167,6 +173,119 @@ class _PendingDepositsViewState extends State<_PendingDepositsView> {
                     onPressed: () async {
                       await _adminService.rejectDeposit(deposit['id'], null);
                       _loadDeposits();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _PendingWithdrawalsView extends StatefulWidget {
+  const _PendingWithdrawalsView();
+
+  @override
+  State<_PendingWithdrawalsView> createState() => _PendingWithdrawalsViewState();
+}
+
+class _PendingWithdrawalsViewState extends State<_PendingWithdrawalsView> {
+  final _adminService = AdminService();
+  List<Map<String, dynamic>> _withdrawals = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWithdrawals();
+  }
+
+  Future<void> _loadWithdrawals() async {
+    setState(() => _isLoading = true);
+    try {
+      final withdrawals = await _adminService.getPendingWithdrawals();
+      setState(() => _withdrawals = withdrawals);
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_withdrawals.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle, size: 64, color: Colors.green),
+            SizedBox(height: 16),
+            Text('No hay retiros pendientes'),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadWithdrawals,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _withdrawals.length,
+        itemBuilder: (context, index) {
+          final withdrawal = _withdrawals[index];
+          final user = withdrawal['users'] as Map<String, dynamic>?;
+          return Card(
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.red,
+                child: Text(withdrawal['currency'] ?? ''),
+              ),
+              title: Text(user?['full_name'] ?? 'Usuario'),
+              subtitle: Text(
+                '\$${withdrawal['amount']} ${withdrawal['currency']}\n'
+                '${user?['email'] ?? ''}\n'
+                'CBU: ${withdrawal['destination_cbu'] ?? 'N/A'}',
+              ),
+              isThreeLine: true,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.check, color: Colors.green),
+                    onPressed: () async {
+                      try {
+                        await _adminService.approveWithdrawal(
+                          withdrawal['id'],
+                          withdrawal['user_id'],
+                          (withdrawal['amount'] as num).toDouble(),
+                          withdrawal['currency'],
+                        );
+                        _loadWithdrawals();
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Retiro aprobado')),
+                          );
+                        }
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    onPressed: () async {
+                      await _adminService.rejectWithdrawal(withdrawal['id'], null);
+                      _loadWithdrawals();
                     },
                   ),
                 ],

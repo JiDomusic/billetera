@@ -165,4 +165,19 @@ class WalletService {
       'status': 'pending',
     });
   }
+
+  Future<void> requestWithdrawal({
+    required String userId,
+    required double amount,
+    required String currency,
+    required String destinationCbu,
+  }) async {
+    await SupabaseConfig.client.from('withdrawal_requests').insert({
+      'user_id': userId,
+      'amount': amount,
+      'currency': currency,
+      'destination_cbu': destinationCbu,
+      'status': 'pending',
+    });
+  }
 }

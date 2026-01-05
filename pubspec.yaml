@@ -46,10 +46,20 @@ dependencies:
   intl: ^0.20.2
   uuid: ^4.5.1
   http: ^1.2.1
+  # QR Scanner
+  mobile_scanner: ^5.1.1
+  # Local Notifications
+  flutter_local_notifications: ^17.2.2
+  # Offline Cache
+  shared_preferences: ^2.2.3
+  # Connectivity
+  connectivity_plus: ^6.0.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  mockito: ^5.4.4
+  build_runner: ^2.4.8
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is

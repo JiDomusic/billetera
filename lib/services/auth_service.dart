@@ -30,7 +30,7 @@ class AuthService {
   }
 
   Future<void> _createUserInSupabase(User supabaseUser, String fullName) async {
-    final cvu = _generateCVU();
+    final cvu = await _generateUniqueCVU();
 
     final userData = {
       'firebase_uid': supabaseUser.id,
@@ -49,9 +49,32 @@ class AuthService {
     ]);
   }
 
-  String _generateCVU() {
-    final random = DateTime.now().millisecondsSinceEpoch.toString();
-    return '0000003100${random.substring(random.length - 11).padLeft(11, '0')}';
+  Future<String> _generateUniqueCVU() async {
+    String cvu;
+    bool exists = true;
+    int attempts = 0;
+    const maxAttempts = 10;
+
+    do {
+      final random = DateTime.now().millisecondsSinceEpoch.toString();
+      final randomSuffix = (attempts * 1000).toString().padLeft(4, '0');
+      cvu = '0000003100${random.substring(random.length - 7).padLeft(7, '0')}$randomSuffix';
+
+      final existing = await SupabaseConfig.client
+          .from('users')
+          .select('id')
+          .eq('cvu', cvu)
+          .maybeSingle();
+
+      exists = existing != null;
+      attempts++;
+    } while (exists && attempts < maxAttempts);
+
+    if (exists) {
+      throw Exception('No se pudo generar un CVU unico');
+    }
+
+    return cvu;
   }
 
   Future<UserModel?> getCurrentUserData() async {

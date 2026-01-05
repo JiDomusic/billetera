@@ -138,9 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        // TODO: Implementar recuperar contrasena
-                      },
+                      onPressed: () => context.go('/forgot-password'),
                       child: const Text('Olvidaste tu contrasena?'),
                     ),
                   ),

@@ -5,15 +5,20 @@ import '../models/transaction_model.dart';
 import '../models/exchange_rate_model.dart';
 import '../models/user_model.dart';
 import '../services/wallet_service.dart';
+import '../services/cache_service.dart';
+import '../services/notification_service.dart';
 import '../config/supabase_config.dart';
 
 class WalletProvider extends ChangeNotifier {
   final WalletService _walletService = WalletService();
+  final CacheService _cacheService = CacheService();
+  final NotificationService _notificationService = NotificationService();
 
   List<WalletModel> _wallets = [];
   List<TransactionModel> _transactions = [];
   ExchangeRateModel? _exchangeRate;
   bool _isLoading = false;
+  bool _isOffline = false;
   String? _error;
   RealtimeChannel? _exchangeRateChannel;
 
@@ -21,6 +26,7 @@ class WalletProvider extends ChangeNotifier {
   List<TransactionModel> get transactions => _transactions;
   ExchangeRateModel? get exchangeRate => _exchangeRate;
   bool get isLoading => _isLoading;
+  bool get isOffline => _isOffline;
   String? get error => _error;
 
   WalletModel? get arsWallet =>
@@ -31,14 +37,25 @@ class WalletProvider extends ChangeNotifier {
   Future<void> loadWallets(String userId) async {
     _isLoading = true;
     _error = null;
+    _isOffline = false;
     notifyListeners();
 
     try {
       _wallets = await _walletService.getWallets(userId);
+      await _cacheService.cacheWallets(_wallets);
+      await _notificationService.subscribeToWalletChanges(userId);
       _isLoading = false;
       notifyListeners();
     } catch (e) {
-      _error = 'Error al cargar billeteras';
+      // Intentar cargar desde cache
+      final cached = _cacheService.getCachedWallets();
+      if (cached != null && cached.isNotEmpty) {
+        _wallets = cached;
+        _isOffline = true;
+        _error = null;
+      } else {
+        _error = 'Error al cargar billeteras';
+      }
       _isLoading = false;
       notifyListeners();
     }
@@ -47,10 +64,19 @@ class WalletProvider extends ChangeNotifier {
   Future<void> loadExchangeRate() async {
     try {
       _exchangeRate = await _walletService.getExchangeRate();
+      if (_exchangeRate != null) {
+        await _cacheService.cacheExchangeRate(_exchangeRate!);
+      }
       _ensureExchangeRateSubscription();
       notifyListeners();
     } catch (e) {
-      _error = 'Error al cargar cotizacion';
+      // Intentar cargar desde cache
+      final cached = _cacheService.getCachedExchangeRate();
+      if (cached != null) {
+        _exchangeRate = cached;
+      } else {
+        _error = 'Error al cargar cotizacion';
+      }
       notifyListeners();
     }
   }
@@ -58,9 +84,16 @@ class WalletProvider extends ChangeNotifier {
   Future<void> loadTransactions(String userId) async {
     try {
       _transactions = await _walletService.getTransactions(userId);
+      await _cacheService.cacheTransactions(_transactions);
       notifyListeners();
     } catch (e) {
-      _error = 'Error al cargar transacciones';
+      // Intentar cargar desde cache
+      final cached = _cacheService.getCachedTransactions();
+      if (cached != null && cached.isNotEmpty) {
+        _transactions = cached;
+      } else {
+        _error = 'Error al cargar transacciones';
+      }
       notifyListeners();
     }
   }
@@ -160,6 +193,34 @@ class WalletProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> requestWithdrawal({
+    required String userId,
+    required double amount,
+    required String currency,
+    required String destinationCbu,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _walletService.requestWithdrawal(
+        userId: userId,
+        amount: amount,
+        currency: currency,
+        destinationCbu: destinationCbu,
+      );
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = 'Error al solicitar retiro';
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();
@@ -184,9 +245,15 @@ class WalletProvider extends ChangeNotifier {
         .subscribe();
   }
 
+  Future<void> clearCache() async {
+    await _cacheService.clearUserCache();
+    await _notificationService.unsubscribe();
+  }
+
   @override
   void dispose() {
     _exchangeRateChannel?.unsubscribe();
+    _notificationService.dispose();
     super.dispose();
   }
 }
