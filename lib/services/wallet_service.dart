@@ -62,42 +62,22 @@ class WalletService {
   }
 
   Future<void> transfer({
-    required String fromUserId,
-    required String toUserId,
+    required String toIdentifier,
     required double amount,
     required String currency,
     String? description,
   }) async {
-    final fromWallet = await getWallet(fromUserId, currency);
-    final toWallet = await getWallet(toUserId, currency);
-
-    if (fromWallet == null || toWallet == null) {
-      throw Exception('Billetera no encontrada');
-    }
-
-    if (fromWallet.balance < amount) {
-      throw Exception('Saldo insuficiente');
-    }
-
-    await SupabaseConfig.client.from('wallets').update({
-      'balance': fromWallet.balance - amount,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', fromWallet.id);
-
-    await SupabaseConfig.client.from('wallets').update({
-      'balance': toWallet.balance + amount,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', toWallet.id);
-
-    await SupabaseConfig.client.from('transactions').insert({
-      'from_wallet_id': fromWallet.id,
-      'to_wallet_id': toWallet.id,
-      'type': 'transfer',
-      'amount': amount,
-      'currency': currency,
-      'description': description ?? 'Transferencia',
-      'status': 'completed',
+    final response = await SupabaseConfig.client.rpc('transfer_money', params: {
+      'p_to_identifier': toIdentifier,
+      'p_amount': amount,
+      'p_currency': currency,
+      'p_description': description ?? 'Transferencia',
     });
+
+    final result = response as Map<String, dynamic>;
+    if (result['success'] != true) {
+      throw Exception(result['error'] ?? 'Error en la transferencia');
+    }
   }
 
   Future<void> convert({

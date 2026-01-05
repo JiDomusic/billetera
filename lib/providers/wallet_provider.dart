@@ -75,7 +75,7 @@ class WalletProvider extends ChangeNotifier {
 
   Future<bool> transfer({
     required String fromUserId,
-    required String toUserId,
+    required String toIdentifier,
     required double amount,
     required String currency,
     String? description,
@@ -86,8 +86,7 @@ class WalletProvider extends ChangeNotifier {
 
     try {
       await _walletService.transfer(
-        fromUserId: fromUserId,
-        toUserId: toUserId,
+        toIdentifier: toIdentifier,
         amount: amount,
         currency: currency,
         description: description,
@@ -98,7 +97,7 @@ class WalletProvider extends ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      _error = e.toString();
+      _error = e.toString().replaceAll('Exception: ', '');
       _isLoading = false;
       notifyListeners();
       return false;

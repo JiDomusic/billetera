@@ -97,7 +97,7 @@ class _TransferScreenState extends State<TransferScreen> {
 
     final success = await walletProvider.transfer(
       fromUserId: authProvider.user!.id,
-      toUserId: _recipient!.id,
+      toIdentifier: _recipient!.cvu ?? _recipient!.email,
       amount: double.parse(_amountController.text),
       currency: _selectedCurrency,
       description: _descriptionController.text.isEmpty
