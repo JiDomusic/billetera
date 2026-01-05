@@ -180,4 +180,25 @@ class WalletService {
       'status': 'pending',
     });
   }
+
+  // Configuracion de la app
+  Future<Map<String, String>> getAppConfig() async {
+    final response = await SupabaseConfig.client
+        .from('app_config')
+        .select();
+
+    final Map<String, String> config = {};
+    for (final row in response as List) {
+      config[row['key']] = row['value'] ?? '';
+    }
+    return config;
+  }
+
+  Future<void> updateAppConfig(String key, String value) async {
+    await SupabaseConfig.client.from('app_config').upsert({
+      'key': key,
+      'value': value,
+      'updated_at': DateTime.now().toIso8601String(),
+    });
+  }
 }

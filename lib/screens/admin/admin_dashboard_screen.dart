@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/admin_service.dart';
 import '../../services/exchange_rate_service.dart';
+import '../../services/wallet_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -60,6 +61,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 icon: Icon(Icons.currency_exchange),
                 label: Text('Cotizacion'),
               ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings),
+                label: Text('Config'),
+              ),
             ],
           ),
           const VerticalDivider(thickness: 1, width: 1),
@@ -81,6 +86,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return const _UsersView();
       case 3:
         return const _ExchangeRateView();
+      case 4:
+        return const _AppConfigView();
       default:
         return const SizedBox();
     }
@@ -591,6 +598,146 @@ class _ExchangeRateViewState extends State<_ExchangeRateView> {
                       ),
                     )
                   : const Text('Guardar Cotizacion'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AppConfigView extends StatefulWidget {
+  const _AppConfigView();
+
+  @override
+  State<_AppConfigView> createState() => _AppConfigViewState();
+}
+
+class _AppConfigViewState extends State<_AppConfigView> {
+  final _walletService = WalletService();
+  final _aliasController = TextEditingController();
+  final _bankController = TextEditingController();
+  final _currencyController = TextEditingController();
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
+  }
+
+  @override
+  void dispose() {
+    _aliasController.dispose();
+    _bankController.dispose();
+    _currencyController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadConfig() async {
+    setState(() => _isLoading = true);
+    try {
+      final config = await _walletService.getAppConfig();
+      _aliasController.text = config['deposit_alias'] ?? '';
+      _bankController.text = config['deposit_bank'] ?? '';
+      _currencyController.text = config['deposit_currency'] ?? '';
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveConfig() async {
+    setState(() => _isSaving = true);
+    try {
+      await _walletService.updateAppConfig('deposit_alias', _aliasController.text.trim());
+      await _walletService.updateAppConfig('deposit_bank', _bankController.text.trim());
+      await _walletService.updateAppConfig('deposit_currency', _currencyController.text.trim());
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Configuracion guardada')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Datos para depositos',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Los usuarios veran estos datos cuando quieran depositar dinero.',
+              style: TextStyle(color: Colors.white60),
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: _aliasController,
+              decoration: const InputDecoration(
+                labelText: 'Alias bancario',
+                hintText: 'ej: mi.cuenta.banco',
+                prefixIcon: Icon(Icons.account_balance),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _bankController,
+              decoration: const InputDecoration(
+                labelText: 'Nombre del banco',
+                hintText: 'ej: Banco Galicia',
+                prefixIcon: Icon(Icons.business),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _currencyController,
+              decoration: const InputDecoration(
+                labelText: 'Tipo de cuenta',
+                hintText: 'ej: Pesos ARS',
+                prefixIcon: Icon(Icons.monetization_on),
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 24),
+            FilledButton(
+              onPressed: _isSaving ? null : _saveConfig,
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: const Color(0xFF00D4AA),
+              ),
+              child: _isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Guardar Configuracion'),
             ),
           ],
         ),

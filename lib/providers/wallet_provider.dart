@@ -226,6 +226,31 @@ class WalletProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Configuracion de la app (con cache)
+  Future<Map<String, String>> getAppConfig() async {
+    // Primero intentar cache
+    final cached = _cacheService.getCachedAppConfig();
+    if (cached != null && cached.isNotEmpty) {
+      // Refrescar en background
+      _walletService.getAppConfig().then((fresh) {
+        _cacheService.cacheAppConfig(fresh);
+      });
+      return cached;
+    }
+
+    // Si no hay cache, buscar de Supabase
+    final config = await _walletService.getAppConfig();
+    await _cacheService.cacheAppConfig(config);
+    return config;
+  }
+
+  Future<void> updateAppConfig(String key, String value) async {
+    await _walletService.updateAppConfig(key, value);
+    // Invalidar cache
+    final config = await _walletService.getAppConfig();
+    await _cacheService.cacheAppConfig(config);
+  }
+
   void _ensureExchangeRateSubscription() {
     if (_exchangeRateChannel != null) return;
     _exchangeRateChannel = SupabaseConfig.client
