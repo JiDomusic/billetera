@@ -1,31 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
 
-  User? _firebaseUser;
+  User? _supabaseUser;
   UserModel? _user;
   bool _isLoading = false;
   String? _error;
 
-  User? get firebaseUser => _firebaseUser;
+  User? get supabaseUser => _supabaseUser;
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
   String? get error => _error;
-  bool get isAuthenticated => _firebaseUser != null;
+  bool get isAuthenticated => _supabaseUser != null;
 
   AuthProvider() {
-    _authService.authStateChanges.listen((user) {
-      _firebaseUser = user;
-      if (user != null) {
+    _authService.authStateChanges.listen((authState) {
+      _supabaseUser = authState.session?.user;
+      if (_supabaseUser != null) {
         _loadUserData();
       } else {
         _user = null;
+        notifyListeners();
       }
-      notifyListeners();
     });
   }
 
@@ -49,11 +49,6 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return true;
-    } on FirebaseAuthException catch (e) {
-      _error = _getErrorMessage(e.code);
-      _isLoading = false;
-      notifyListeners();
-      return false;
     } catch (e) {
       _error = 'Error al iniciar sesion';
       _isLoading = false;
@@ -72,11 +67,6 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return true;
-    } on FirebaseAuthException catch (e) {
-      _error = _getErrorMessage(e.code);
-      _isLoading = false;
-      notifyListeners();
-      return false;
     } catch (e) {
       _error = 'Error al registrarse: ${e.toString()}';
       _isLoading = false;
@@ -110,19 +100,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   String _getErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'Usuario no encontrado';
-      case 'wrong-password':
-        return 'Contrasena incorrecta';
-      case 'email-already-in-use':
-        return 'Email ya registrado';
-      case 'weak-password':
-        return 'Contrasena muy debil';
-      case 'invalid-email':
-        return 'Email invalido';
-      default:
-        return 'Error de autenticacion';
-    }
+    // Supabase no expone codes como Firebase, devolvemos genérico.
+    return 'Error de autenticacion ($code)';
   }
 }

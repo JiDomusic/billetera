@@ -67,40 +67,91 @@ ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deposit_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE exchange_rates ENABLE ROW LEVEL SECURITY;
 
--- Policies para users
-CREATE POLICY "Users can view own data" ON users
-  FOR SELECT USING (true);
+-- Limpieza de politicas previas
+DROP POLICY IF EXISTS "Users can view own data" ON users;
+DROP POLICY IF EXISTS "Users can insert own data" ON users;
+DROP POLICY IF EXISTS "Users can view own wallets" ON wallets;
+DROP POLICY IF EXISTS "Users can update own wallets" ON wallets;
+DROP POLICY IF EXISTS "System can insert wallets" ON wallets;
+DROP POLICY IF EXISTS "Users can view own transactions" ON transactions;
+DROP POLICY IF EXISTS "Users can insert transactions" ON transactions;
+DROP POLICY IF EXISTS "Users can view own deposits" ON deposit_requests;
+DROP POLICY IF EXISTS "Users can insert deposits" ON deposit_requests;
+DROP POLICY IF EXISTS "Anyone can view exchange rates" ON exchange_rates;
 
-CREATE POLICY "Users can insert own data" ON users
-  FOR INSERT WITH CHECK (true);
+-- UID de admin (reemplazar con tu UID de Firebase si quieres acceso total)
+-- SELECT 'Bcd4Lan0p4Yt4LqmXcUNM0ryaV82';
 
--- Policies para wallets
-CREATE POLICY "Users can view own wallets" ON wallets
-  FOR SELECT USING (true);
+-- Policies para users (por UID de Firebase enviado en x-firebase-uid)
+CREATE POLICY "user select own" ON users
+  FOR SELECT TO anon
+  USING (firebase_uid = current_setting('request.headers.x-firebase-uid', true));
 
-CREATE POLICY "Users can update own wallets" ON wallets
-  FOR UPDATE USING (true);
+CREATE POLICY "user insert own" ON users
+  FOR INSERT TO anon
+  WITH CHECK (firebase_uid = current_setting('request.headers.x-firebase-uid', true));
 
-CREATE POLICY "System can insert wallets" ON wallets
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "admin full users" ON users
+  FOR ALL TO anon
+  USING (current_setting('request.headers.x-firebase-uid', true) = 'Bcd4Lan0p4Yt4LqmXcUNM0ryaV82')
+  WITH CHECK (current_setting('request.headers.x-firebase-uid', true) = 'Bcd4Lan0p4Yt4LqmXcUNM0ryaV82');
 
--- Policies para transactions
-CREATE POLICY "Users can view own transactions" ON transactions
-  FOR SELECT USING (true);
+-- Policies para wallets (solo billeteras del usuario)
+CREATE POLICY "wallets select own" ON wallets
+  FOR SELECT TO anon
+  USING (user_id IN (SELECT id FROM users WHERE firebase_uid = current_setting('request.headers.x-firebase-uid', true)));
 
-CREATE POLICY "Users can insert transactions" ON transactions
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "wallets insert own" ON wallets
+  FOR INSERT TO anon
+  WITH CHECK (user_id IN (SELECT id FROM users WHERE firebase_uid = current_setting('request.headers.x-firebase-uid', true)));
 
--- Policies para deposit_requests
-CREATE POLICY "Users can view own deposits" ON deposit_requests
-  FOR SELECT USING (true);
+CREATE POLICY "wallets update own" ON wallets
+  FOR UPDATE TO anon
+  USING (user_id IN (SELECT id FROM users WHERE firebase_uid = current_setting('request.headers.x-firebase-uid', true)));
 
-CREATE POLICY "Users can insert deposits" ON deposit_requests
-  FOR INSERT WITH CHECK (true);
+CREATE POLICY "admin full wallets" ON wallets
+  FOR ALL TO anon
+  USING (current_setting('request.headers.x-firebase-uid', true) = 'Bcd4Lan0p4Yt4LqmXcUNM0ryaV82')
+  WITH CHECK (current_setting('request.headers.x-firebase-uid', true) = 'Bcd4Lan0p4Yt4LqmXcUNM0ryaV82');
+
+-- Policies para transactions (solo donde el usuario participa)
+CREATE POLICY "tx select own" ON transactions
+  FOR SELECT TO anon
+  USING (
+    from_wallet_id IN (SELECT id FROM wallets WHERE user_id IN (SELECT id FROM users WHERE firebase_uid = current_setting('request.headers.x-firebase-uid', true)))
+    OR to_wallet_id IN (SELECT id FROM wallets WHERE user_id IN (SELECT id FROM users WHERE firebase_uid = current_setting('request.headers.x-firebase-uid', true)))
+  );
+
+CREATE POLICY "tx insert own" ON transactions
+  FOR INSERT TO anon
+  WITH CHECK (
+    from_wallet_id IN (SELECT id FROM wallets WHERE user_id IN (SELECT id FROM users WHERE firebase_uid = current_setting('request.headers.x-firebase-uid', true)))
+    OR to_wallet_id IN (SELECT id FROM wallets WHERE user_id IN (SELECT id FROM users WHERE firebase_uid = current_setting('request.headers.x-firebase-uid', true)))
+  );
+
+CREATE POLICY "admin full txs" ON transactions
+  FOR ALL TO anon
+  USING (current_setting('request.headers.x-firebase-uid', true) = 'Bcd4Lan0p4Yt4LqmXcUNM0ryaV82')
+  WITH CHECK (current_setting('request.headers.x-firebase-uid', true) = 'Bcd4Lan0p4Yt4LqmXcUNM0ryaV82');
+
+-- Policies para deposit_requests (solo del usuario)
+CREATE POLICY "deposits select own" ON deposit_requests
+  FOR SELECT TO anon
+  USING (user_id IN (SELECT id FROM users WHERE firebase_uid = current_setting('request.headers.x-firebase-uid', true)));
+
+CREATE POLICY "deposits insert own" ON deposit_requests
+  FOR INSERT TO anon
+  WITH CHECK (user_id IN (SELECT id FROM users WHERE firebase_uid = current_setting('request.headers.x-firebase-uid', true)));
+
+CREATE POLICY "admin full deposits" ON deposit_requests
+  FOR ALL TO anon
+  USING (current_setting('request.headers.x-firebase-uid', true) = 'Bcd4Lan0p4Yt4LqmXcUNM0ryaV82')
+  WITH CHECK (current_setting('request.headers.x-firebase-uid', true) = 'Bcd4Lan0p4Yt4LqmXcUNM0ryaV82');
 
 -- Policies para exchange_rates (solo lectura publica)
-CREATE POLICY "Anyone can view exchange rates" ON exchange_rates
-  FOR SELECT USING (true);
+CREATE POLICY "exchange select" ON exchange_rates
+  FOR SELECT TO anon
+  USING (true);
 
 -- Indices para mejor performance
 CREATE INDEX IF NOT EXISTS idx_users_firebase_uid ON users(firebase_uid);

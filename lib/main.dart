@@ -28,51 +28,80 @@ class MyApp extends StatelessWidget {
       child: MaterialApp.router(
         title: 'Billetera JJ',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF00D4AA),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          scaffoldBackgroundColor: Colors.white,
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF00D4AA),
-            foregroundColor: Colors.white,
-            elevation: 0,
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.grey[50],
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey[300]!),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFF00D4AA), width: 2),
-            ),
-          ),
-          cardTheme: CardThemeData(
-            elevation: 0,
-            color: Colors.grey[50],
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-          ),
-          filledButtonTheme: FilledButtonThemeData(
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF00D4AA),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
+        theme: _buildDarkTheme(),
+        routerConfig: AppRoutes.router,
+      ),
+    );
+  }
+
+  ThemeData _buildDarkTheme() {
+    const background = Color(0xFF0D1117);
+    const surface = Color(0xFF131A22);
+    const accent = Color(0xFF47E6B1);
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: background,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: accent,
+        brightness: Brightness.dark,
+        background: background,
+        surface: surface,
+        primary: accent,
+        secondary: const Color(0xFF7DF2C3),
+      ),
+      appBarTheme: const AppBarTheme(
+        backgroundColor: surface,
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        elevation: 0,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFF1A212C),
+        labelStyle: const TextStyle(color: Colors.white70),
+        hintStyle: const TextStyle(color: Colors.white54),
+        prefixIconColor: Colors.white70,
+        suffixIconColor: Colors.white70,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Colors.white12),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: Colors.white24),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: accent, width: 2),
+        ),
+      ),
+      cardTheme: CardThemeData(
+        color: surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Colors.white12),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: accent,
+          foregroundColor: Colors.black,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
-        routerConfig: AppRoutes.router,
+      ),
+      textTheme: Typography.whiteCupertino.apply(
+        displayColor: Colors.white,
+        bodyColor: Colors.white.withOpacity(0.9),
+      ),
+      dividerColor: Colors.white12,
+      listTileTheme: const ListTileThemeData(
+        iconColor: Colors.white70,
       ),
     );
   }

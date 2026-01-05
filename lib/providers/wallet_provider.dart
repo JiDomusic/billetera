@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/wallet_model.dart';
 import '../models/transaction_model.dart';
 import '../models/exchange_rate_model.dart';
 import '../models/user_model.dart';
 import '../services/wallet_service.dart';
+import '../config/supabase_config.dart';
 
 class WalletProvider extends ChangeNotifier {
   final WalletService _walletService = WalletService();
@@ -13,6 +15,7 @@ class WalletProvider extends ChangeNotifier {
   ExchangeRateModel? _exchangeRate;
   bool _isLoading = false;
   String? _error;
+  RealtimeChannel? _exchangeRateChannel;
 
   List<WalletModel> get wallets => _wallets;
   List<TransactionModel> get transactions => _transactions;
@@ -44,6 +47,7 @@ class WalletProvider extends ChangeNotifier {
   Future<void> loadExchangeRate() async {
     try {
       _exchangeRate = await _walletService.getExchangeRate();
+      _ensureExchangeRateSubscription();
       notifyListeners();
     } catch (e) {
       _error = 'Error al cargar cotizacion';
@@ -160,5 +164,30 @@ class WalletProvider extends ChangeNotifier {
   void clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  void _ensureExchangeRateSubscription() {
+    if (_exchangeRateChannel != null) return;
+    _exchangeRateChannel = SupabaseConfig.client
+        .channel('public:exchange_rates')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'exchange_rates',
+          callback: (payload) {
+            final record = payload.newRecord;
+            if (record != null) {
+              _exchangeRate = ExchangeRateModel.fromJson(record);
+              notifyListeners();
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    _exchangeRateChannel?.unsubscribe();
+    super.dispose();
   }
 }

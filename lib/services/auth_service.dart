@@ -1,46 +1,45 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 import '../models/user_model.dart';
 
 class AuthService {
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final SupabaseClient _supabase = SupabaseConfig.client;
 
-  User? get currentUser => _firebaseAuth.currentUser;
-  Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
+  User? get currentUser => _supabase.auth.currentUser;
+  Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
-  Future<UserCredential> signIn(String email, String password) async {
-    return await _firebaseAuth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
+  Future<AuthResponse> signIn(String email, String password) async {
+    return await _supabase.auth.signInWithPassword(email: email, password: password);
   }
 
-  Future<UserCredential> signUp(String email, String password, String fullName) async {
-    final credential = await _firebaseAuth.createUserWithEmailAndPassword(
+  Future<AuthResponse> signUp(String email, String password, String fullName) async {
+    final response = await _supabase.auth.signUp(
       email: email,
       password: password,
+      data: {'full_name': fullName},
     );
-
-    await _createUserInSupabase(credential.user!, fullName);
-
-    return credential;
+    final user = response.user;
+    if (user != null) {
+      try {
+        await _createUserInSupabase(user, fullName);
+      } catch (_) {
+        // Puede fallar si no hay sesion (email por confirmar); se creara al ingresar.
+      }
+    }
+    return response;
   }
 
-  Future<void> _createUserInSupabase(User firebaseUser, String fullName) async {
+  Future<void> _createUserInSupabase(User supabaseUser, String fullName) async {
     final cvu = _generateCVU();
 
     final userData = {
-      'firebase_uid': firebaseUser.uid,
-      'email': firebaseUser.email,
+      'firebase_uid': supabaseUser.id,
+      'email': supabaseUser.email,
       'full_name': fullName,
       'cvu': cvu,
     };
 
-    final response = await SupabaseConfig.client
-        .from('users')
-        .insert(userData)
-        .select()
-        .single();
+    final response = await SupabaseConfig.client.from('users').insert(userData).select().single();
 
     final userId = response['id'];
 
@@ -58,20 +57,37 @@ class AuthService {
   Future<UserModel?> getCurrentUserData() async {
     if (currentUser == null) return null;
 
-    final response = await SupabaseConfig.client
+    var response = await SupabaseConfig.client
         .from('users')
         .select()
-        .eq('firebase_uid', currentUser!.uid)
-        .single();
+        .eq('firebase_uid', currentUser!.id)
+        .maybeSingle();
 
+    if (response == null) {
+      // Si no existe el registro (pudo fallar en signUp), intentamos crearlo ahora.
+      final meta = currentUser!.userMetadata ?? {};
+      final fullName = meta['full_name'] ?? currentUser!.email ?? 'Usuario';
+      try {
+        await _createUserInSupabase(currentUser!, fullName);
+        response = await SupabaseConfig.client
+            .from('users')
+            .select()
+            .eq('firebase_uid', currentUser!.id)
+            .maybeSingle();
+      } catch (_) {
+        return null;
+      }
+    }
+
+    if (response == null) return null;
     return UserModel.fromJson(response);
   }
 
   Future<void> signOut() async {
-    await _firebaseAuth.signOut();
+    await _supabase.auth.signOut();
   }
 
   Future<void> resetPassword(String email) async {
-    await _firebaseAuth.sendPasswordResetEmail(email: email);
+    await _supabase.auth.resetPasswordForEmail(email);
   }
 }

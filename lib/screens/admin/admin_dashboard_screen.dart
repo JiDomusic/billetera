@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/admin_service.dart';
+import '../../services/exchange_rate_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -307,10 +308,13 @@ class _ExchangeRateView extends StatefulWidget {
 
 class _ExchangeRateViewState extends State<_ExchangeRateView> {
   final _adminService = AdminService();
+  final _exchangeRateService = ExchangeRateService();
   final _buyController = TextEditingController();
   final _sellController = TextEditingController();
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isFetchingMep = false;
+  bool _hasAutoUpdated = false;
 
   @override
   void initState() {
@@ -333,12 +337,14 @@ class _ExchangeRateViewState extends State<_ExchangeRateView> {
         _buyController.text = rate['buy_rate'].toString();
         _sellController.text = rate['sell_rate'].toString();
       }
+      // Al abrir, intenta actualizar MEP una vez para mantener fresco el valor diario.
+      _autoUpdateMepOnce();
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _saveRate() async {
+  Future<void> _saveRate({bool silent = false}) async {
     final buyRate = double.tryParse(_buyController.text);
     final sellRate = double.tryParse(_sellController.text);
 
@@ -352,7 +358,7 @@ class _ExchangeRateViewState extends State<_ExchangeRateView> {
     setState(() => _isSaving = true);
     try {
       await _adminService.updateExchangeRate(buyRate, sellRate);
-      if (mounted) {
+      if (mounted && !silent) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cotizacion actualizada')),
         );
@@ -360,6 +366,38 @@ class _ExchangeRateViewState extends State<_ExchangeRateView> {
     } finally {
       setState(() => _isSaving = false);
     }
+  }
+
+  Future<void> _fetchMep({bool save = false, bool silent = false}) async {
+    setState(() => _isFetchingMep = true);
+    try {
+      final mep = await _exchangeRateService.fetchMepRate();
+      _buyController.text = mep['buy']!.toStringAsFixed(2);
+      _sellController.text = mep['sell']!.toStringAsFixed(2);
+      if (save) {
+        await _saveRate(silent: silent);
+      }
+      if (mounted && !silent) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cotizacion MEP actualizada')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo obtener MEP: $e')),
+        );
+      }
+    } finally {
+      setState(() => _isFetchingMep = false);
+    }
+  }
+
+  void _autoUpdateMepOnce() {
+    if (_hasAutoUpdated) return;
+    _hasAutoUpdated = true;
+    // Busca MEP y guarda silenciosamente en Supabase para que usuarios vean el valor del día.
+    _fetchMep(save: true, silent: true);
   }
 
   @override
@@ -402,6 +440,22 @@ class _ExchangeRateViewState extends State<_ExchangeRateView> {
               ),
             ),
             const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _isFetchingMep ? null : _fetchMep,
+              icon: _isFetchingMep
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.currency_exchange),
+              label: const Text('Tomar MEP (dolarapi.com)'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.blueAccent,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+            const SizedBox(height: 12),
             FilledButton(
               onPressed: _isSaving ? null : _saveRate,
               style: FilledButton.styleFrom(

@@ -59,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+      floatingActionButton: _buildAdminFab(context),
       body: Consumer2<AuthProvider, WalletProvider>(
         builder: (context, auth, wallet, child) {
           if (auth.user == null) {
@@ -73,19 +74,48 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Saludo
-                  Text(
-                    'Hola, ${auth.user!.fullName ?? "Usuario"}',
-                    style: Theme.of(context).textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'CVU: ${auth.user!.cvu ?? "No disponible"}',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF131A22),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1E2A36),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.account_balance_wallet_outlined, color: Color(0xFF47E6B1)),
                         ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Hola, ${auth.user!.fullName ?? "Usuario"}',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'CVU: ${auth.user!.cvu ?? "No disponible"}',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: Colors.white60,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
                   // Tarjetas de saldo
                   _buildBalanceCard(
@@ -93,8 +123,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: 'Pesos Argentinos',
                     balance: wallet.arsWallet?.balance ?? 0,
                     currency: 'ARS',
-                    color: Colors.blue,
-                    icon: Icons.attach_money,
+                    color: const Color(0xFF1F8A70),
+                    accent: const Color(0xFF47E6B1),
+                    icon: Icons.payments_outlined,
                   ),
                   const SizedBox(height: 16),
                   _buildBalanceCard(
@@ -102,46 +133,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     title: 'Dolares',
                     balance: wallet.usdWallet?.balance ?? 0,
                     currency: 'USD',
-                    color: Colors.green,
-                    icon: Icons.currency_exchange,
+                    color: const Color(0xFF1F2A36),
+                    accent: const Color(0xFF4AC1FF),
+                    icon: Icons.attach_money,
                   ),
                   const SizedBox(height: 24),
 
                   // Cotizacion
                   if (wallet.exchangeRate != null) ...[
-                    Card(
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF131A22),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white12),
+                      ),
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              children: [
-                                const Text('Compra'),
-                                Text(
-                                  _currencyFormat.format(wallet.exchangeRate!.buyRate),
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const Icon(Icons.currency_exchange, size: 32),
-                            Column(
-                              children: [
-                                const Text('Venta'),
-                                Text(
-                                  _currencyFormat.format(wallet.exchangeRate!.sellRate),
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red,
-                                  ),
-                                ),
-                              ],
-                            ),
+                            _rateTile('Compra', _currencyFormat.format(wallet.exchangeRate!.buyRate), Colors.greenAccent),
+                            const Icon(Icons.currency_exchange, size: 28, color: Colors.white70),
+                            _rateTile('Venta', _currencyFormat.format(wallet.exchangeRate!.sellRate), Colors.redAccent),
                           ],
                         ),
                       ),
@@ -160,9 +173,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: _buildActionButton(
                           context,
-                          icon: Icons.send,
+                          icon: Icons.send_rounded,
                           label: 'Transferir',
-                          color: Colors.blue,
+                          color: const Color(0xFF47E6B1),
                           onTap: () => context.go('/transfer'),
                         ),
                       ),
@@ -170,9 +183,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: _buildActionButton(
                           context,
-                          icon: Icons.currency_exchange,
+                          icon: Icons.currency_exchange_rounded,
                           label: 'Convertir',
-                          color: Colors.orange,
+                          color: const Color(0xFF4AC1FF),
                           onTap: () => context.go('/convert'),
                         ),
                       ),
@@ -180,9 +193,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: _buildActionButton(
                           context,
-                          icon: Icons.qr_code,
+                          icon: Icons.qr_code_rounded,
                           label: 'QR',
-                          color: Colors.purple,
+                          color: const Color(0xFFB388FF),
                           onTap: () => context.go('/qr'),
                         ),
                       ),
@@ -206,21 +219,31 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 8),
                   if (wallet.transactions.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(
-                          child: Text('No hay transacciones'),
-                        ),
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF131A22),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: const Center(
+                        child: Text('No hay transacciones'),
                       ),
                     )
                   else
-                    ...wallet.transactions.take(5).map((tx) => Card(
+                    ...wallet.transactions.take(5).map((tx) => Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF131A22),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.white12),
+                          ),
                           child: ListTile(
                             leading: CircleAvatar(
-                              backgroundColor: tx.type == TransactionType.deposit
-                                  ? Colors.green[100]
-                                  : Colors.blue[100],
+                              backgroundColor: (tx.type == TransactionType.deposit
+                                      ? Colors.greenAccent
+                                      : Colors.blueAccent)
+                                  .withOpacity(0.12),
                               child: Icon(
                                 tx.type == TransactionType.deposit
                                     ? Icons.arrow_downward
@@ -228,13 +251,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ? Icons.swap_horiz
                                         : Icons.arrow_upward,
                                 color: tx.type == TransactionType.deposit
-                                    ? Colors.green
-                                    : Colors.blue,
+                                    ? Colors.greenAccent
+                                    : Colors.blueAccent,
                               ),
                             ),
                             title: Text(tx.typeLabel),
                             subtitle: Text(
                               DateFormat('dd/MM/yyyy HH:mm').format(tx.createdAt),
+                              style: const TextStyle(color: Colors.white60),
                             ),
                             trailing: Text(
                               tx.currency == 'ARS'
@@ -243,8 +267,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: tx.type == TransactionType.deposit
-                                    ? Colors.green
-                                    : null,
+                                    ? Colors.greenAccent
+                                    : Colors.white,
                               ),
                             ),
                           ),
@@ -264,43 +288,60 @@ class _HomeScreenState extends State<HomeScreen> {
     required double balance,
     required String currency,
     required Color color,
+    required Color accent,
     required IconData icon,
   }) {
     final format = currency == 'ARS' ? _currencyFormat : _usdFormat;
 
-    return Card(
-      color: color,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Row(
-          children: [
-            Icon(icon, size: 48, color: Colors.white),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    format.format(balance),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            color.withOpacity(0.85),
+            const Color(0xFF0F1720),
           ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white12),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 36, color: accent),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  format.format(balance),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -312,21 +353,57 @@ class _HomeScreenState extends State<HomeScreen> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Card(
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            children: [
-              Icon(icon, size: 32, color: color),
-              const SizedBox(height: 8),
-              Text(label),
-            ],
-          ),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          color: const Color(0xFF131A22),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white12),
+        ),
+        child: Column(
+          children: [
+            CircleAvatar(
+              backgroundColor: color.withOpacity(0.14),
+              radius: 24,
+              child: Icon(icon, size: 24, color: color),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _rateTile(String title, String value, Color valueColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(color: Colors.white70)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: valueColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAdminFab(BuildContext context) {
+    return FloatingActionButton(
+      onPressed: () => context.go('/admin'),
+      backgroundColor: const Color(0xFF47E6B1),
+      child: const Icon(Icons.attach_money_rounded, color: Colors.black),
     );
   }
 }

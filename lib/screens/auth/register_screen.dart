@@ -45,6 +45,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const surface = Color(0xFF131A22);
+    const accent = Color(0xFF47E6B1);
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -63,22 +66,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'Crear Cuenta',
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white12),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text(
+                          '\u{1F4B0}',
+                          style: TextStyle(fontSize: 50),
                         ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Completa tus datos para registrarte',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey[600],
+                        const SizedBox(height: 8),
+                        Text(
+                          'Crear cuenta',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: accent,
+                              ),
+                          textAlign: TextAlign.center,
                         ),
-                    textAlign: TextAlign.center,
+                        const SizedBox(height: 6),
+                        Text(
+                          'Completá tus datos para empezar a usar la billetera',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Colors.white70,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 28),
                   TextFormField(
                     controller: _nameController,
                     textCapitalization: TextCapitalization.words,
@@ -212,8 +233,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 4,
                     children: [
                       const Text('Ya tienes cuenta?'),
                       TextButton(

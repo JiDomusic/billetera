@@ -1,16 +1,21 @@
 # billetera
 
-A new Flutter project.
+## Configuracion de entorno
 
-## Getting Started
+Las credenciales de Supabase se inyectan en tiempo de compilacion para no dejarlas hardcodeadas.
 
-This project is a starting point for a Flutter application.
+1. Crea un archivo `.env` (no se versiona) con tus valores reales:
+```
+SUPABASE_URL=https://<tu_proyecto>.supabase.co
+SUPABASE_ANON_KEY=<tu_anon_public>
+```
+2. Ejecuta la app pasando las variables:
+```
+flutter run --dart-define-from-file=.env
+```
+o en build:
+```
+flutter build apk --dart-define-from-file=.env
+```
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Si falta alguna variable, `SupabaseConfig.initialize()` lanzara un error explicando cual falta.
