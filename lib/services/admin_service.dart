@@ -1,22 +1,27 @@
-import 'package:firebase_auth/firebase_auth.dart' as firebase;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/supabase_config.dart';
 
 class AdminService {
-  final firebase.FirebaseAuth _firebaseAuth = firebase.FirebaseAuth.instance;
+  static const String adminEmail = 'jimenadominguezdev@gmail.com';
 
-  firebase.User? get currentAdmin => _firebaseAuth.currentUser;
-  Stream<firebase.User?> get adminAuthChanges => _firebaseAuth.authStateChanges();
+  User? get currentAdmin => SupabaseConfig.client.auth.currentUser;
+  Stream<AuthState> get adminAuthChanges => SupabaseConfig.client.auth.onAuthStateChange;
 
-  Future<firebase.UserCredential> signIn(String email, String password) async {
-    return await _firebaseAuth.signInWithEmailAndPassword(
+  Future<AuthResponse> signIn(String email, String password) async {
+    if (email.toLowerCase() != adminEmail) {
+      throw Exception('No tienes permisos de administrador');
+    }
+    return await SupabaseConfig.client.auth.signInWithPassword(
       email: email,
       password: password,
     );
   }
 
   Future<void> signOut() async {
-    await _firebaseAuth.signOut();
+    await SupabaseConfig.client.auth.signOut();
   }
+
+  bool get isAdmin => currentAdmin?.email?.toLowerCase() == adminEmail;
 
   // Obtener todos los usuarios
   Future<List<Map<String, dynamic>>> getAllUsers() async {

@@ -34,17 +34,19 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     });
 
     try {
-      await _adminService.signIn(
+      final response = await _adminService.signIn(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      if (mounted) {
+      if (response.user != null && mounted) {
         context.go('/admin/dashboard');
       }
     } catch (e) {
       setState(() {
-        _error = 'Credenciales invalidas';
+        _error = e.toString().contains('permisos')
+            ? 'No tienes permisos de administrador'
+            : 'Credenciales invalidas';
       });
     } finally {
       if (mounted) {
